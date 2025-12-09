@@ -116,3 +116,16 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* Hide Next.js Dev Tools Indicator */
+[data-nextjs-toast],
+nextjs-portal,
+#nextjs-dev-tools-indicator,
+div[class*="nextjs-toast"],
+div[class*="nextjs-static-indicator"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -9999 !important;
+}
