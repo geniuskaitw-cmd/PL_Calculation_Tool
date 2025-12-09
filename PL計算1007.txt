@@ -1,0 +1,1597 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>P&L計算器 v4.1(行業基準模型版)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg:#0b0f14; --card:#0f172a; --muted:#94a3b8; --text:#e6edf3; --line:#223047;
+    --brand:#38bdf8; --brand-2:#22d3ee; --chip:#111827; --chip-bd:#334155;
+    --danger:#f87171; --ok:#22c55e;
+  }
+  html,body{background:var(--bg);color:var(--text);font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", "Microsoft JhengHei";}
+  .wrap{max-width: 1280px; margin: 26px auto; padding: 0 16px;}
+  .header{position:sticky; top:0; z-index:20; background:linear-gradient(180deg, rgba(11,15,20,.95), rgba(11,15,20,.65)); backdrop-filter: blur(6px); border-bottom:1px solid #1f2937;}
+  .header .row{display:flex; align-items:center; gap:12px; padding:12px 0;}
+  h1{font-size:28px; margin:0; letter-spacing:.3px;}
+  .pill{display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:4px 10px; border-radius:999px; background:var(--chip); border:1px solid var(--chip-bd); color:var(--muted)}
+  .brand{color:#a5f3fc}
+  .card{background:var(--card); border:1px solid #1f2937; border-radius:18px; padding:18px; box-shadow:0 6px 24px rgba(0,0,0,.35);}
+  .grid{display:grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap:12px;}
+  .col-2{grid-column: span 2;} .col-3{grid-column: span 3;} .col-4{grid-column: span 4;} .col-5{grid-column: span 5;}
+  .col-6{grid-column: span 6;} .col-7{grid-column: span 7;} .col-8{grid-column: span 8;} .col-12{grid-column: span 12;}
+  label{display:block; font-size:12px; color:var(--muted); margin:4px 0 6px;}
+  input, select, textarea{width:100%; background:#0b1220; color:#e6edf3; border:1px solid #253042; border-radius:10px; padding:10px 12px; outline:none; font-size:14px;}
+  textarea{min-height:70px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;}
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  button{background:linear-gradient(135deg, var(--brand), var(--brand-2)); color:#06131a; border:none; border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer}
+  button.secondary{background:#1f2937; color:#e6edf3; border:1px solid #2b3a4e}
+  button.ghost{background:transparent; color:#94a3b8; border:1px dashed #334155}
+  .muted{color:#94a3b8}
+  .subtle{font-size:12px; color:#9aa4b2;}
+  .neg{ color:#f87171; font-weight:700; }
+  .ok{ color:#22c55e; font-weight:700; }
+  hr{border:none;border-top:1px solid #223047; margin:22px 0;}
+  .table{width:100%; border-collapse:collapse; font-size:14px; margin-top:8px;}
+  .table th, .table td{border-bottom:1px solid var(--line); padding:8px 10px; text-align:right}
+  .table th:first-child, .table td:first-child{text-align:left}
+  .panel{background:#0b1220; border:1px solid #1f2a39; border-radius:14px; padding:12px;}
+  .profile{border:1px solid #223047; border-radius:12px; padding:12px; margin:6px 0;}
+  .profile h3{margin:0 0 6px 0; font-size:16px; color:#c5d5ea;}
+  .chapter{font-weight:900; font-size:20px; margin:0 0 6px 0; color:#fbbf24;}
+  .ch-caption{font-size:13px; color:#a8b3c2; margin-bottom:8px;}
+  .section{font-weight:800; font-size:16px; margin:12px 0 6px;}
+  .distrib{overflow:auto; max-height:320px; border:1px dashed #334155; border-radius:12px; padding:8px;}
+  .distrib table{width:100%; border-collapse:collapse; font-size:13px;}
+  .distrib th, .distrib td{border-bottom:1px solid #1f2a39; padding:6px 6px; text-align:center;}
+  .note{font-size:12px; color:#cbd5e1;}
+  .disabled{opacity:.5; pointer-events:none;}
+  .fix-highlight{background:rgba(34, 197, 94, 0.1); border-left:3px solid #22c55e; padding-left:8px;}
+  .model-card{border:1px solid #334155; border-radius:12px; padding:12px; margin:8px 0; background:#0b1220;}
+  .model-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .model-name{font-weight:700; font-size:16px;}
+  .model-desc{font-size:12px; color:#94a3b8; margin-bottom:8px;}
+  .anchor-grid{display:grid; grid-template-columns: repeat(5, 1fr); gap:8px;}
+  .anchor-input{font-size:12px; padding:6px 8px;}
+  .modal{position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:100; display:none;}
+  .modal-content{position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card); border-radius:18px; padding:24px; max-width:90vw; max-height:90vh; overflow-y:auto; width:800px;}
+  .close-btn{position:absolute; top:12px; right:16px; background:none; border:none; color:#94a3b8; font-size:24px; cursor:pointer;}
+  .model-selector{border:1px solid #334155; border-radius:8px; padding:8px; margin:4px 0;}
+  .preset-btn{background:#1f2937; color:#e6edf3; border:1px solid #334155; padding:6px 10px; border-radius:6px; font-size:12px; margin:2px;}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="wrap">
+      <div class="row">
+        <h1>P&L計算器 <span class="brand">v4.1</span></h1>
+        <span class="pill">行業基準模型</span>
+        <span class="pill">智能曲率繼承</span>
+        <span class="pill">模型編輯器</span>
+        <span class="pill fix-highlight">修復RR歸零問題</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap" style="margin-top:18px;">
+    <div class="card">
+      <div class="chapter">Chapter 1: RR / ARPDAU 設定</div>
+      
+      <div class="grid">
+        <div class="col-4">
+          <label>🎯 選擇行業基準模型</label>
+          <select id="presetModel">
+            <option value="">請選擇基準模型...</option>
+            <option value="A">A型 - RPG高標 (RR1:48% → RR360:0.4%)</option>
+            <option value="B">B型 - 一般RPG (RR1:34% → RR360:0.1%)</option>
+            <option value="C">C型 - RPG低標 (RR1:30% → RR360:0.1%)</option>
+            <option value="D">D型 - Royal Match (RR1:48% → RR360:0.8%)</option>
+            <option value="E">E型 - 地鐵跑酷 (RR1:38% → RR360:0.4%)</option>
+            <option value="F">F型 - Coin Master (RR1:40% → RR360:1.0%)</option>
+          </select>
+        </div>
+        <div class="col-3">
+          <label>要建立幾個月份的檔(K)</label>
+          <input id="kMonths" type="number" min="0" max="24" value="0">
+        </div>
+        <div class="col-5" style="display:flex; align-items:end; gap:8px;">
+          <button id="applyPresetBtn">套用模型到通用RR</button>
+          <button id="buildProfilesBtn">建立月份欄位</button>
+          <button id="openModelEditor" class="secondary">🔧 編輯基準模型</button>
+        </div>
+      </div>
+
+      <div id="buildMsg" class="pill" style="margin:8px 0;">選擇基準模型後可一鍵套用,或建立月份檔案進行個別設定。</div>
+
+      <div id="monthProfiles" style="display:none; margin-top:6px;"></div>
+
+      <div id="genericRR" style="margin-top:10px;">
+        <div class="section">通用 RR 錨點(至少填 3 個;0~1)</div>
+        <div class="grid">
+          <div class="col-2"><label>RR1</label><input id="rr1" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR3</label><input id="rr3" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR7</label><input id="rr7" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR14</label><input id="rr14" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR30</label><input id="rr30" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR60</label><input id="rr60" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR90</label><input id="rr90" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR120</label><input id="rr120" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR150</label><input id="rr150" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR180</label><input id="rr180" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR210</label><input id="rr210" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR240</label><input id="rr240" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR270</label><input id="rr270" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR300</label><input id="rr300" type="number" step="0.0001" min="0" max="1"></div>
+          <div class="col-2"><label>RR360</label><input id="rr360" type="number" step="0.0001" min="0" max="1"></div>
+        </div>
+        <div class="grid" style="margin-top:8px;">
+          <div class="col-3"><label>ARPDAU(用於 Chapter 1 LTV)</label><input id="arpdau_top" type="number" step="0.0001" min="0" value="1"></div>
+          <div class="col-5"><label>指定天數結果(逗號分隔)</label><input id="days" type="text" value="7,30,60,90,120,180,360"></div>
+          <div class="col-2"><label>最大模擬天數(≤ 99,999)</label><input id="maxDay" type="number" min="30" max="99999" value="360"></div>
+          <div class="col-2 fix-highlight"><label>最小留存率(%)</label><input id="minRetention" type="number" min="0.1" max="10" step="0.1" value="0.1"></div>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:8px;">
+        <div class="col-4">
+          <label>選擇要用哪個月份的曲線模擬(若有建立月份檔)</label>
+          <select id="activeMonthSel"><option value="">(未建立或未指定)</option></select>
+        </div>
+        <div class="col-8" style="display:flex; gap:8px; align-items:end; justify-content:flex-end;">
+          <button id="runBtn">計算(生成每日 RR & LTV)</button>
+          <button id="csvBtn" class="secondary" disabled>下載每日曲線 CSV</button>
+          <button id="resetBtn" class="ghost">清空輸入</button>
+        </div>
+        <div class="col-12"><span id="msg" class="pill">至少輸入 3 個 RR 錨點,或選擇基準模型快速開始。</span></div>
+      </div>
+
+      <div id="result" style="margin-top:10px; display:none;">
+        <div class="grid">
+          <div class="col-6">
+            <div class="section">A. 指定天數結果</div>
+            <table class="table" id="ltvTable"><thead><tr><th>Day</th><th>RR(推算)</th><th>累積人日 S<sub>D</sub></th><th>LTV<sub>D</sub></th></tr></thead><tbody></tbody></table>
+          </div>
+          <div class="col-6">
+            <div class="section">B. 每日 RR / 累積人日 / LTV(區間檢視)</div>
+            <div class="row" style="margin-bottom:8px;">
+              <label>顯示區間</label>
+              <input id="rangeStart" type="number" min="0" value="1" style="width:120px;">
+              <span class="muted">到</span>
+              <input id="rangeEnd" type="number" min="1" value="90" style="width:120px;">
+              <button id="showRangeBtn" class="secondary">顯示區間</button>
+            </div>
+            <table class="table" id="dailyTable"><thead><tr><th>Day</th><th>RR(推算)</th><th>累積人日 S<sub>D</sub></th><th>LTV<sub>D</sub></th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <hr/>
+
+      <div class="chapter">Chapter 2:每月模擬(依 Chapter 1 選定月份 RR;ARPDAU 可覆寫)</div>
+
+      <div class="grid">
+        <div class="col-2"><label>模擬總月數 M</label><input id="months" type="number" min="1" max="240" value="24"></div>
+        <div class="col-2"><label>渠道分成(%)</label><input id="channelShare" type="number" min="0" max="100" step="0.01" value="0"></div>
+        <div class="col-2"><label>IP/CP分成(%)</label><input id="ipShare" type="number" min="0" max="100" step="0.01" value="0"></div>
+        <div class="col-2"><label>其他成本(%)</label><input id="otherCost" type="number" min="0" max="100" step="0.01" value="0"></div>
+        <div class="col-4">
+          <label>收入 ARPDAU 來源</label>
+          <select id="arpSource">
+            <option value="monthly" selected>使用 Chapter 2 每月 ARPDAU</option>
+            <option value="top">覆寫為 Chapter 1 選定月份 ARPDAU</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section">1) 每月新增玩家(Installs)</div>
+      <div class="panel">
+        <div class="grid">
+          <div class="col-2"><label>逐月填值:前 k 個月</label><input id="nuCount" type="number" min="0" value="3"></div>
+          <div class="col-6"><label>值(逗號分隔)</label><input id="nuValues" type="text" placeholder="10000,12000,15000"></div>
+          <div class="col-2"><label>尾段固定值</label><input id="nuTail" type="number" min="0" value="10000"></div>
+          <div class="col-2"><label>固定到第 N 月</label><input id="nuTailEnd" type="number" min="1" value="24"></div>
+        </div>
+
+        <div class="grid" style="margin-top:10px;">
+          <div class="col-12"><b>導入分配設定(支持逐月覆寫;含防呆)</b></div>
+          <div class="col-3">
+            <label>全域預設模式</label>
+            <select id="distDefaultMode">
+              <option value="集中">集中導入(N 天內導完)</option>
+              <option value="平均">分散導入(均分30天)</option>
+              <option value="客製">客製(N 天內導完 M%,其餘均分)</option>
+            </select>
+          </div>
+          <div class="col-2"><label>N(天數,1~30)</label><input id="distDefaultN" type="number" min="1" max="30" value="1"></div>
+          <div class="col-2"><label>M(%,僅客製用)</label><input id="distDefaultPct" type="number" min="0" max="100" step="0.01" value="60"></div>
+          <div class="col-3" style="display:flex; align-items:end; gap:8px;">
+            <button id="toggleOverrides" class="secondary">開啟逐月覆寫表</button>
+            <button id="applyGlobal" class="ghost">套用全域到覆寫表</button>
+          </div>
+        </div>
+
+        <div id="distOverrides" class="distrib" style="display:none; margin-top:10px;">
+          <table id="distTable"><thead><tr><th>月</th><th>模式</th><th>N日內</th><th>M%(客製用)</th></tr></thead><tbody></tbody></table>
+          <div class="note">說明:平均:30天均分(N/M 不適用);集中:均分前 N 天(M 不適用);客製:前 N 天合計 M%,其餘均分。</div>
+        </div>
+      </div>
+
+      <div class="section">2) CPI</div>
+      <div class="grid">
+        <div class="col-2"><label>逐月填值:前 k 個月</label><input id="cpiCount" type="number" min="0" value="3"></div>
+        <div class="col-6"><label>值(逗號分隔)</label><input id="cpiValues" type="text" placeholder="1.2,1.3,1.4"></div>
+        <div class="col-2"><label>尾段固定值</label><input id="cpiTail" type="number" min="0" step="0.0001" value="1.2"></div>
+        <div class="col-2"><label>固定到第 N 月</label><input id="cpiTailEnd" type="number" min="1" value="24"></div>
+      </div>
+
+      <div class="section">3) 每月 ARPDAU</div>
+      <div id="arpBlock">
+        <div class="grid">
+          <div class="col-2"><label>逐月填值:前 k 個月</label><input id="arpCount" type="number" min="0" value="3"></div>
+          <div class="col-6"><label>值(逗號分隔)</label><input id="arpValues" type="text" placeholder="2.5,2.4,2.3"></div>
+          <div class="col-2"><label>尾段固定值</label><input id="arpTail" type="number" min="0" step="0.0001" value="2.5"></div>
+          <div class="col-2"><label>固定到第 N 月</label><input id="arpTailEnd" type="number" min="1" value="24"></div>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:8px;">
+        <div class="col-12 row">
+          <button id="runMonthlyBtn">計算每月營運</button>
+          <button id="csvMonthlyBtn" class="secondary" disabled>下載每月匯總 CSV</button>
+          <span id="msgMonthly" class="pill">Chapter 2 使用 Chapter 1 選定月份的 RR;ARPDAU 來源可切換。</span>
+        </div>
+      </div>
+
+      <div id="monthlyResult" style="margin-top:10px; display:none;">
+        <div class="section">每月匯總</div>
+        <table class="table" id="monthlyTable">
+          <thead>
+            <tr id="monthlyTableHeader">
+              <th>Month</th><th>Installs</th><th>CPI</th><th>Marketing Cost</th>
+              <th>ARPDAU</th><th>Avg DAU</th><th>Revenue (Gross)</th>
+              <th id="channelCostHeader" style="display:none;">渠道分成</th>
+              <th id="ipCostHeader" style="display:none;">IP/CP分成</th>
+              <th id="otherCostHeader" style="display:none;">其他成本</th>
+              <th>Revenue (Net)</th>
+              <th>ROAS</th><th>ROI (新客@H)</th><th>累積盈虧</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="row" style="margin-top:10px;">
+          <span id="bePill" class="pill">回本月:—</span>
+          <span id="projPill" class="pill">RR 來源:—;ARPDAU 來源:—;導入分配:—。</span>
+        </div>
+      </div>
+
+      <hr/>
+
+      <div class="chapter">反推 A:指定回本期 → 最高可承受 CPI(依 Chapter 1 RR+ARPDAU)</div>
+      <div class="grid">
+        <div class="col-3"><label>目標回本期(天)</label><input id="targetDaysCPI" type="number" min="1" max="99999" value="90"></div>
+        <div class="col-2" style="align-self:end;"><button id="solveCPIBtn">計算最高可承受 CPI</button></div>
+        <div class="col-7" style="align-self:end;">        <span id="solveCPIMsg" class="pill">以 Chapter 1 選定月份 RR + ARPDAU,加上全部成本項目。</span></div>
+      </div>
+      <div id="solveCPIResult" style="display:none; margin-top:8px;">
+        <table class="table">
+          <thead><tr><th>目標天數</th><th>所需 LTV<sub>毛</sub></th><th>所需 LTV<sub>淨(扣全部成本)</sub></th><th>最高可承受 CPI</th></tr></thead>
+          <tbody id="solveCPIBody"></tbody>
+        </table>
+      </div>
+
+      <hr/>
+
+      <div class="chapter">反推 B:指定回本月數 → 所需 ARPDAU / LTV(依 Chapter 1 RR;用 Chapter 2 Installs/CPI + 導入分配)</div>
+      <div class="grid">
+        <div class="col-3"><label>目標回本月數(H)</label><input id="targetMonths" type="number" min="1" max="240" value="6"></div>
+        <div class="col-3"><label>LTV 取幾天(D)</label><input id="ltvDaysReq" type="number" min="1" max="99999" value="90"></div>
+        <div class="col-3" style="align-self:end;"><button id="solveBtn">計算所需 ARPDAU / LTV</button></div>
+      </div>
+      <div id="solveResult" style="display:none; margin-top:8px;">
+        <table class="table">
+          <thead><tr><th>目標 H(月)</th><th>所需 ARPDAU</th><th>LTV<sub>D(毛)</sub></th><th>LTV<sub>D(淨,扣全部成本)</sub></th></tr></thead>
+          <tbody id="solveBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模型編輯器彈窗 -->
+  <div id="modelEditorModal" class="modal">
+    <div class="modal-content">
+      <button class="close-btn" id="closeModalBtn">×</button>
+      <h2 style="margin-top:0;">🔧 行業基準模型編輯器</h2>
+      <p class="muted">修改預設模型數據,自動保存到本地儲存。重置可恢復原始基準值。</p>
+      
+      <div id="modelEditorContent">
+        <!-- 動態生成模型編輯界面 -->
+      </div>
+      
+      <div style="margin-top:20px; text-align:center;">
+        <button id="saveModelsBtn">💾 保存所有修改</button>
+        <button id="resetAllModelsBtn" class="secondary">🔄 重置所有模型</button>
+        <button id="exportModelsBtn" class="ghost">📤 匯出JSON</button>
+        <button id="importModelsBtn" class="ghost">📥 匯入JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 隱藏的文件輸入 -->
+  <input type="file" id="importFileInput" style="display:none;" accept=".json">
+
+<script>
+// ===== 基礎工具函數 =====
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const $=s=>document.querySelector(s);
+const locale='en-US';
+const fmtNum=(x,d=2)=>(x===""||x==null||!isFinite(x))?"":Number(x).toLocaleString(locale,{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtInt=(x)=>(x===""||x==null||!isFinite(x))?"":Math.round(Number(x)).toLocaleString(locale);
+const fmtPct=(x,d=1)=>(x===""||x==null||!isFinite(x))?"":(Number(x)*100).toLocaleString(locale,{minimumFractionDigits:d,maximumFractionDigits:d})+"%";
+const wrapNeg=(val,html)=>(isFinite(val)&&Number(val)<0)?`<span class="neg">${html}</span>`:html;
+function parseList(text){ if(!text) return []; return text.split(/[,\s]+/).map(s=>s.trim()).filter(Boolean).map(Number).filter(x=>Number.isFinite(x)); }
+function parseDays(str,maxDay){
+  return str.split(/[,\s]+/).map(s=>s.trim()).filter(Boolean)
+    .map(Number).filter(n=>Number.isFinite(n)&&n>=0&&n<=maxDay).sort((a,b)=>a-b);
+}
+const fmtInt0=(x)=> (x===""||x==null||!isFinite(x)) ? "" : Math.round(Number(x)).toLocaleString(locale, {maximumFractionDigits:0});
+
+// ===== 行業基準模型數據 =====
+const DEFAULT_MODELS = {
+  A: {
+    name: "RPG高標",
+    description: "RPG遊戲高留存基準,適合優質RPG產品",
+    color: "#22c55e",
+    anchors: {1: 0.48, 3: 0.38, 7: 0.26, 14: 0.18, 30: 0.12, 60: 0.084, 90: 0.059, 120: 0.041, 150: 0.029, 180: 0.02, 210: 0.014, 240: 0.01, 270: 0.007, 300: 0.005, 360: 0.004}
+  },
+  B: {
+    name: "一般RPG",
+    description: "RPG遊戲平均留存水準,通用RPG參考",
+    color: "#3b82f6",
+    anchors: {1: 0.34, 3: 0.24, 7: 0.16, 14: 0.1, 30: 0.06, 60: 0.039, 90: 0.025, 120: 0.016, 150: 0.01, 180: 0.007, 210: 0.005, 240: 0.003, 270: 0.002, 300: 0.001, 360: 0.001}
+  },
+  C: {
+    name: "RPG低標",
+    description: "RPG遊戲低留存基準,保守估計用",
+    color: "#f59e0b",
+    anchors: {1: 0.3, 3: 0.2, 7: 0.12, 14: 0.08, 30: 0.045, 60: 0.029, 90: 0.019, 120: 0.012, 150: 0.008, 180: 0.005, 210: 0.004, 240: 0.002, 270: 0.002, 300: 0.001, 360: 0.001}
+  },
+  D: {
+    name: "ROYAL MATCH",
+    description: "三消遊戲代表,中度休閒遊戲參考",
+    color: "#ef4444",
+    anchors: {1: 0.48, 3: 0.36, 7: 0.28, 14: 0.22, 30: 0.15, 60: 0.113, 90: 0.085, 120: 0.064, 150: 0.048, 180: 0.036, 210: 0.027, 240: 0.02, 270: 0.015, 300: 0.011, 360: 0.008}
+  },
+  E: {
+    name: "地鐵跑酷",
+    description: "跑酷遊戲代表,快節奏遊戲參考",
+    color: "#8b5cf6",
+    anchors: {1: 0.38, 3: 0.28, 7: 0.18, 14: 0.13, 30: 0.09, 60: 0.065, 90: 0.047, 120: 0.034, 150: 0.025, 180: 0.018, 210: 0.013, 240: 0.009, 270: 0.007, 300: 0.005, 360: 0.004}
+  },
+  F: {
+    name: "COIN MASTER",
+    description: "社交博弈遊戲,長期運營參考",
+    color: "#06b6d4",
+    anchors: {1: 0.4, 3: 0.3, 7: 0.24, 14: 0.21, 30: 0.19, 60: 0.12, 90: 0.09, 120: 0.06, 150: 0.04, 180: 0.03, 210: 0.023, 240: 0.018, 270: 0.015, 300: 0.013, 360: 0.01}
+  }
+};
+
+// ===== 模型管理 =====
+let currentModels = {...DEFAULT_MODELS};
+
+// 載入自訂模型
+function loadCustomModels() {
+  try {
+    const saved = localStorage.getItem('pl_calculator_models_v41');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      currentModels = {...DEFAULT_MODELS, ...parsed};
+    }
+  } catch (e) {
+    console.warn('載入自訂模型失敗:', e);
+  }
+}
+
+// 保存自訂模型
+function saveCustomModels() {
+  try {
+    localStorage.setItem('pl_calculator_models_v41', JSON.stringify(currentModels));
+  } catch (e) {
+    console.warn('保存自訂模型失敗:', e);
+  }
+}
+
+// 重置到預設模型
+function resetToDefaultModels() {
+  currentModels = {...DEFAULT_MODELS};
+  localStorage.removeItem('pl_calculator_models_v41');
+}
+
+// ===== v4.1 智能曲率繼承算法 =====
+function buildRRWithCurvatureInheritance(knownDays, knownMap, maxDay, minRetentionPct = 0.1, baseModel = null) {
+  const days = [...knownDays].sort((a,b)=>a-b);
+  const minRetention = minRetentionPct / 100;
+  
+  if (days.length < 3) {
+    throw new Error("至少需要3個RR錨點");
+  }
+  
+  const rr = new Array(maxDay + 1).fill(0);
+  rr[0] = 1.0;
+  
+  // 如果有基礎模型,檢測修改的錨點
+  let modifiedSegments = new Set();
+  if (baseModel) {
+    days.forEach(day => {
+      if (baseModel.anchors[day] && Math.abs(baseModel.anchors[day] - knownMap[day]) > 0.001) {
+        const segmentStart = days.find(d => d <= day);
+        const segmentEnd = days.find(d => d > day);
+        if (segmentStart) modifiedSegments.add(segmentStart);
+        if (segmentEnd) modifiedSegments.add(segmentEnd);
+      }
+    });
+  }
+  
+  for (let day = 1; day <= maxDay; day++) {
+    if (days.includes(day)) {
+      rr[day] = knownMap[day];
+    } else {
+      let leftDay = 0, rightDay = maxDay + 1;
+      let leftValue = 1.0, rightValue = minRetention;
+      
+      for (const d of days) {
+        if (d < day && d > leftDay) {
+          leftDay = d;
+          leftValue = knownMap[d];
+        }
+        if (d > day && d < rightDay) {
+          rightDay = d;
+          rightValue = knownMap[d];
+        }
+      }
+      
+      if (leftDay > 0 && rightDay <= maxDay) {
+        const inModifiedSegment = modifiedSegments.has(leftDay) || modifiedSegments.has(rightDay);
+        
+        if (baseModel && !inModifiedSegment && baseModel.anchors[leftDay] && baseModel.anchors[rightDay]) {
+          const baseLeftDay = leftDay, baseRightDay = rightDay;
+          const baseLeftValue = baseModel.anchors[baseLeftDay];
+          const baseRightValue = baseModel.anchors[baseRightDay];
+          
+          const baseDays = baseRightDay - baseLeftDay;
+          const baseT = (day - baseLeftDay) / baseDays;
+          
+          const baseLogLeft = Math.log(Math.max(baseLeftValue, 1e-10));
+          const baseLogRight = Math.log(Math.max(baseRightValue, 1e-10));
+          const baseRatio = Math.exp(baseLogLeft + baseT * (baseLogRight - baseLogLeft)) / baseLeftValue;
+          
+          rr[day] = leftValue * baseRatio;
+        } else {
+          const t = (day - leftDay) / (rightDay - leftDay);
+          const linearInterp = leftValue + t * (rightValue - leftValue);
+          const logLeft = Math.log(Math.max(leftValue, 1e-10));
+          const logRight = Math.log(Math.max(rightValue, 1e-10));
+          const logInterpolated = Math.exp(logLeft + t * (logRight - logLeft));
+          const logWeight = Math.min(0.8, Math.max(0.2, leftValue * rightValue * 2));
+          rr[day] = logWeight * logInterpolated + (1 - logWeight) * linearInterp;
+        }
+        
+      } else if (leftDay > 0) {
+        const lastDays = days.slice(-Math.min(3, days.length));
+        if (lastDays.length >= 2) {
+          let avgDecayRate = 0;
+          let validRates = 0;
+          
+          for (let i = 1; i < lastDays.length; i++) {
+            const d1 = lastDays[i-1], d2 = lastDays[i];
+            const v1 = knownMap[d1], v2 = knownMap[d2];
+            if (v1 > 0 && v2 > 0) {
+              avgDecayRate += Math.log(v1 / v2) / (d2 - d1);
+              validRates++;
+            }
+          }
+          
+          if (validRates > 0) {
+            avgDecayRate /= validRates;
+            avgDecayRate = Math.min(avgDecayRate, 0.02);
+            
+            const lastDay = days[days.length - 1];
+            const lastValue = knownMap[lastDay];
+            const distanceFromLast = day - lastDay;
+            const damping = Math.exp(-distanceFromLast / 100);
+            const extrapolated = lastValue * Math.exp(-avgDecayRate * distanceFromLast * damping);
+            const finalMin = Math.max(minRetention, lastValue * 0.1);
+            rr[day] = Math.max(finalMin, extrapolated);
+          }
+        }
+      }
+    }
+    
+    rr[day] = Math.max(minRetention, Math.min(1, rr[day]));
+    
+    if (day > 1 && rr[day] > rr[day-1] * 1.1) {
+      rr[day] = Math.min(rr[day], rr[day-1] * 1.05);
+    }
+  }
+  
+  return rr;
+}
+
+// ===== RR錨點收集 =====
+function collectRRFromProfile(idx){
+  const ids=[1,3,7,14,30,60,90,120,150,180,210,240,270,300,360];
+  const map={};
+  for(const d of ids){
+    const el=document.getElementById(`m${idx}_rr${d}`);
+    if(!el) continue;
+    const v=el.value.trim();
+    if(v!==""){
+      const f=parseFloat(v);
+      if(!Number.isFinite(f)||f<0||f>1) throw new Error(`M${idx} 的 RR${d} 必須在 0~1 之間`);
+      map[d]=f;
+    }
+  }
+  const days=Object.keys(map).map(Number).sort((a,b)=>a-b);
+  if(days.length<3) throw new Error(`M${idx} 至少需輸入 3 個 RR 錨點`);
+  const arpdau = parseFloat(document.getElementById(`m${idx}_arpdau`).value||"0");
+  if(!Number.isFinite(arpdau)||arpdau<0) throw new Error(`M${idx} 的 ARPDAU 無效`);
+  return {days, map, arpdau};
+}
+
+function pickAnchorsGeneric(){
+  const cand=[1,3,7,14,30,60,90,120,150,180,210,240,270,300,360];
+  const map={};
+  for(const d of cand){
+    const el=document.getElementById("rr"+d);
+    if(!el) continue;
+    const v=el.value.trim();
+    if(v!==""){
+      const f=parseFloat(v);
+      if(!Number.isFinite(f)||f<0||f>1) throw new Error(`RR${d} 必須在 0~1 之間`);
+      map[d]=f;
+    }
+  }
+  const days=Object.keys(map).map(Number).sort((a,b)=>a-b);
+  if(days.length<3) throw new Error("至少需輸入 3 個 RR 錨點");
+  const arpdau = parseFloat($("#arpdau_top").value||"0");
+  if(!Number.isFinite(arpdau)||arpdau<0) throw new Error("Chapter 1 ARPDAU 無效");
+  return {days, map, arpdau};
+}
+
+function cumulative(rr){
+  const s=new Array(rr.length).fill(0);
+  s[0]=1;
+  for(let d=1; d<rr.length; d++){ s[d]=s[d-1]+rr[d]; }
+  return s;
+}
+
+// ===== 初始化 =====
+document.addEventListener('DOMContentLoaded', function() {
+  loadCustomModels();
+  
+  // 初始化導入分配模式的輸入框狀態
+  setTimeout(() => {
+    const mode = $("#distDefaultMode").value || "集中";
+    const nEl = $("#distDefaultN");
+    const pctEl = $("#distDefaultPct");
+    
+    if (nEl && pctEl) {
+      if (mode === "平均") {
+        nEl.disabled = true;
+        pctEl.disabled = true;
+        nEl.style.backgroundColor = "#1a1f2e";
+        pctEl.style.backgroundColor = "#1a1f2e";
+      } else if (mode === "集中") {
+        nEl.disabled = false;
+        pctEl.disabled = true;
+        nEl.style.backgroundColor = "#0b1220";
+        pctEl.style.backgroundColor = "#1a1f2e";
+      } else if (mode === "客製") {
+        nEl.disabled = false;
+        pctEl.disabled = false;
+        nEl.style.backgroundColor = "#0b1220";
+        pctEl.style.backgroundColor = "#0b1220";
+      }
+    }
+  }, 200);
+});
+
+// 套用預設模型到通用RR (移到外面確保事件綁定成功)
+$("#applyPresetBtn").addEventListener("click", () => {
+  const selectedModel = $("#presetModel").value;
+  if (!selectedModel || !currentModels[selectedModel]) {
+    alert("請先選擇一個基準模型");
+    return;
+  }
+  
+  const model = currentModels[selectedModel];
+  const anchorIds = [1,3,7,14,30,60,90,120,150,180,210,240,270,300,360];
+  
+  anchorIds.forEach(day => {
+    const el = document.getElementById(`rr${day}`);
+    if (el && model.anchors[day]) {
+      el.value = model.anchors[day];
+    }
+  });
+  
+  $("#buildMsg").textContent = `已套用 ${model.name} 模型到通用RR錨點`;
+  $("#buildMsg").className = "pill ok";
+});
+
+// ===== UI: 月份檔案建立 =====
+const buildProfilesBtn=$("#buildProfilesBtn");
+const monthProfiles=$("#monthProfiles");
+const activeMonthSel=$("#activeMonthSel");
+
+buildProfilesBtn.addEventListener("click", ()=>{
+  const K = Math.max(0, Math.min(24, parseInt($("#kMonths").value||"0",10)));
+  monthProfiles.innerHTML="";
+  activeMonthSel.innerHTML = `<option value="">(未指定)</option>`;
+  
+  if(K<=0){ 
+    monthProfiles.style.display="none"; 
+    $("#genericRR").style.display="block"; 
+    $("#buildMsg").textContent = "未建立 ⇒ 使用通用 RR";
+    $("#buildMsg").className = "pill";
+    return; 
+  }
+  
+  $("#genericRR").style.display="none"; 
+  monthProfiles.style.display="block";
+  
+  for(let i=1;i<=K;i++){
+    const div=document.createElement("div"); 
+    div.className="profile";
+    
+    div.innerHTML = `
+      <h3>月份 M${i}</h3>
+      <div class="grid">
+        <div class="col-4">
+          <label>🎯 選擇基準模型 (M${i})</label>
+          <select id="m${i}_presetModel">
+            <option value="">請選擇基準模型...</option>
+            <option value="A">A型 - RPG高標</option>
+            <option value="B">B型 - 一般RPG</option>
+            <option value="C">C型 - RPG低標</option>
+            <option value="D">D型 - Royal Match</option>
+            <option value="E">E型 - 地鐵跑酷</option>
+            <option value="F">F型 - Coin Master</option>
+          </select>
+        </div>
+        <div class="col-3">
+          <label>ARPDAU(M${i})</label>
+          <input id="m${i}_arpdau" type="number" min="0" step="0.0001" value="1">
+        </div>
+        <div class="col-5" style="display:flex; align-items:end;">
+          <button id="m${i}_applyPreset" class="preset-btn">套用模型</button>
+        </div>
+      </div>
+      <div class="grid">
+        ${[1,3,7,14,30,60,90,120,150,180,210,240,270,300,360].map(d=>`
+          <div class="col-2"><label>RR${d}</label><input id="m${i}_rr${d}" type="number" step="0.0001" min="0" max="1"></div>
+        `).join('')}
+      </div>`;
+    monthProfiles.appendChild(div);
+    
+    document.getElementById(`m${i}_applyPreset`).addEventListener("click", () => {
+      const selectedModel = document.getElementById(`m${i}_presetModel`).value;
+      if (!selectedModel || !currentModels[selectedModel]) {
+        alert("請先選擇一個基準模型");
+        return;
+      }
+      
+      const model = currentModels[selectedModel];
+      const anchorIds = [1,3,7,14,30,60,90,120,150,180,210,240,270,300,360];
+      
+      anchorIds.forEach(day => {
+        const el = document.getElementById(`m${i}_rr${day}`);
+        if (el && model.anchors[day]) {
+          el.value = model.anchors[day];
+        }
+      });
+    });
+    
+    const opt=document.createElement("option"); 
+    opt.value=String(i); 
+    opt.textContent=`使用月份 M${i}`; 
+    activeMonthSel.appendChild(opt);
+  }
+  
+  $("#buildMsg").textContent = `已建立 ${K} 個月份欄位,每個都可選擇基準模型`;
+  $("#buildMsg").className = "pill ok";
+});
+
+// ===== Chapter 1 計算 =====
+const runBtn=$("#runBtn"), csvBtn=$("#csvBtn"), resetBtn=$("#resetBtn"), msg=$("#msg");
+const tbodyLTV=$("#ltvTable tbody"), tbodyDaily=$("#dailyTable tbody"), result=$("#result");
+let topCache=null;
+
+runBtn.addEventListener("click", ()=>{
+  try{
+    const maxDay=Math.max(30, Math.min(99999, parseInt($("#maxDay").value||"360",10)));
+    const daysToCalc=parseDays($("#days").value||"", maxDay);
+    const minRetentionPct=parseFloat($("#minRetention").value||"0.1");
+    
+    if(daysToCalc.length===0) throw new Error("請在「指定天數結果」輸入有效的數字");
+    
+    let anchors, arpdau, baseModel = null; 
+    const useMonth=activeMonthSel.value;
+    const selectedPreset = $("#presetModel").value;
+    
+    if (selectedPreset && currentModels[selectedPreset]) {
+      baseModel = currentModels[selectedPreset];
+    }
+    
+    if(useMonth){ 
+      const prof=collectRRFromProfile(parseInt(useMonth,10)); 
+      anchors={days:prof.days,map:prof.map}; 
+      arpdau=prof.arpdau; 
+    } else{ 
+      const g=pickAnchorsGeneric(); 
+      anchors={days:g.days,map:g.map}; 
+      arpdau=g.arpdau; 
+    }
+    
+    const rr = buildRRWithCurvatureInheritance(anchors.days, anchors.map, maxDay, minRetentionPct, baseModel);
+    const s = cumulative(rr);
+    
+    tbodyLTV.innerHTML="";
+    daysToCalc.forEach(d=>{
+      const rowLTV=s[d]*arpdau;
+      const tr=document.createElement("tr");
+      tr.innerHTML=`<td>D${d}</td><td>${fmtPct(rr[d],1)}</td><td>${fmtNum(s[d],4)}</td><td>${fmtNum(rowLTV,4)}</td>`;
+      tbodyLTV.appendChild(tr);
+    });
+    
+    tbodyDaily.innerHTML=""; 
+    $("#rangeStart").value=1; 
+    $("#rangeEnd").value=Math.min(90, maxDay);
+    result.style.display="block"; 
+    csvBtn.disabled=false;
+    
+    const modelInfo = baseModel ? `${baseModel.name}基礎+智能曲率` : "v4.1算法";
+    msg.textContent=`完成(使用${useMonth?('月份 M'+useMonth):'通用'} + ${modelInfo};max=D${maxDay};最小留存=${minRetentionPct}%)`;
+    msg.className="pill ok";
+    topCache={rr,s,arpdau,maxDay,useMonth,baseModel};
+    
+  }catch(err){ 
+    result.style.display="none"; 
+    csvBtn.disabled=true; 
+    msg.textContent=`錯誤:${err.message}`; 
+    msg.className="pill neg";
+  }
+});
+
+$("#showRangeBtn").addEventListener("click", ()=>{
+  if(!topCache) return;
+  const {rr,s,arpdau,maxDay}=topCache;
+  const start=Math.max(0, Math.min(maxDay, parseInt($("#rangeStart").value||"1",10)));
+  const end=Math.max(start, Math.min(maxDay, parseInt($("#rangeEnd").value||String(start),10)));
+  tbodyDaily.innerHTML="";
+  for(let d=start; d<=end; d++){
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>D${d}</td><td>${fmtPct(rr[d],1)}</td><td>${fmtNum(s[d],4)}</td><td>${fmtNum(s[d]*arpdau,4)}</td>`;
+    tbodyDaily.appendChild(tr);
+  }
+});
+
+csvBtn.addEventListener("click", ()=>{
+  if(!topCache) return;
+  const {rr,s,arpdau,maxDay,useMonth,baseModel}=topCache;
+  const modelInfo = baseModel ? baseModel.name : 'generic';
+  const rows=[["day","RR","cum_person_days",`LTV(ARPDAU=${arpdau})`,`profile=${useMonth||'generic'}`,`base_model=${modelInfo}`,`algorithm=v4.1_curvature_inheritance`]];
+  for(let d=0; d<=maxDay; d++){ rows.push([d, rr[d], s[d], s[d]*arpdau]); }
+  const stamp=new Date().toISOString().slice(0,19).replace(/[-:T]/g,"");
+  const csv=rows.map(r=>r.join(",")).join("\n");
+  const blob=new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`daily_curve_v4_1_${stamp}.csv`; a.click();
+});
+
+resetBtn.addEventListener("click", ()=>{
+  [1,3,7,14,30,60,90,120,150,180,210,240,270,300,360].forEach(d=>{ const el=document.getElementById("rr"+d); if(el) el.value=""; });
+  $("#presetModel").value="";
+  $("#arpdau_top").value="1"; 
+  $("#days").value="7,30,60,90,120,180,360"; 
+  $("#maxDay").value="360";
+  $("#minRetention").value="0.1";
+  $("#kMonths").value="0"; 
+  monthProfiles.innerHTML=""; 
+  monthProfiles.style.display="none"; 
+  $("#genericRR").style.display="block"; 
+  activeMonthSel.innerHTML=`<option value="">(未建立或未指定)</option>`;
+  result.style.display="none"; 
+  csvBtn.disabled=true; 
+  msg.textContent="至少輸入 3 個 RR 錨點,或選擇基準模型快速開始。"; 
+  msg.className="pill";
+  $("#buildMsg").textContent="選擇基準模型後可一鍵套用,或建立月份檔案進行個別設定。";
+  $("#buildMsg").className="pill";
+  topCache=null;
+});
+
+// ===== 模型編輯器 =====
+const modelEditorModal = $("#modelEditorModal");
+const openModelEditorBtn = $("#openModelEditor");
+const closeModalBtn = $("#closeModalBtn");
+const modelEditorContent = $("#modelEditorContent");
+
+openModelEditorBtn.addEventListener("click", () => {
+  buildModelEditor();
+  modelEditorModal.style.display = "block";
+});
+
+closeModalBtn.addEventListener("click", () => {
+  modelEditorModal.style.display = "none";
+});
+
+modelEditorModal.addEventListener("click", (e) => {
+  if (e.target === modelEditorModal) {
+    modelEditorModal.style.display = "none";
+  }
+});
+
+function buildModelEditor() {
+  modelEditorContent.innerHTML = "";
+  
+  Object.entries(currentModels).forEach(([key, model]) => {
+    const modelCard = document.createElement("div");
+    modelCard.className = "model-card";
+    modelCard.style.borderLeftColor = model.color;
+    
+    const anchorDays = [1,3,7,14,30,60,90,120,150,180,210,240,270,300,360];
+    const anchorInputs = anchorDays.map(day => {
+      const value = model.anchors[day] || "";
+      return `<div><label>RR${day}</label><input type="number" step="0.0001" min="0" max="1" value="${value}" id="edit_${key}_${day}" class="anchor-input"></div>`;
+    }).join("");
+    
+    modelCard.innerHTML = `
+      <div class="model-header">
+        <div>
+          <div class="model-name" style="color:${model.color}">${key}型 - ${model.name}</div>
+          <div class="model-desc">${model.description}</div>
+        </div>
+        <div>
+          <button class="preset-btn" onclick="resetModel('${key}')">🔄 重置</button>
+          <button class="preset-btn" onclick="validateModel('${key}')">✓ 驗證</button>
+        </div>
+      </div>
+      <div class="anchor-grid">
+        ${anchorInputs}
+      </div>
+    `;
+    
+    modelEditorContent.appendChild(modelCard);
+  });
+}
+
+window.resetModel = function(modelKey) {
+  if (!DEFAULT_MODELS[modelKey]) return;
+  
+  const defaultModel = DEFAULT_MODELS[modelKey];
+  const anchorDays = [1,3,7,14,30,60,90,120,150,180,210,240,270,300,360];
+  
+  anchorDays.forEach(day => {
+    const input = document.getElementById(`edit_${modelKey}_${day}`);
+    if (input && defaultModel.anchors[day]) {
+      input.value = defaultModel.anchors[day];
+    }
+  });
+  
+  alert(`${modelKey}型模型已重置為預設值`);
+};
+
+window.validateModel = function(modelKey) {
+  const anchorDays = [1,3,7,14,30,60,90,120,150,180,210,240,270,300,360];
+  const values = [];
+  
+  for (const day of anchorDays) {
+    const input = document.getElementById(`edit_${modelKey}_${day}`);
+    if (input && input.value.trim()) {
+      const value = parseFloat(input.value);
+      if (!Number.isFinite(value) || value < 0 || value > 1) {
+        alert(`${modelKey}型 RR${day} 數值無效:${input.value}`);
+        input.focus();
+        return false;
+      }
+      values.push({day, value});
+    }
+  }
+  
+  if (values.length < 3) {
+    alert(`${modelKey}型至少需要3個錨點`);
+    return false;
+  }
+  
+  for (let i = 1; i < values.length; i++) {
+    if (values[i].value > values[i-1].value) {
+      alert(`${modelKey}型 RR${values[i].day} (${values[i].value}) 不應大於 RR${values[i-1].day} (${values[i-1].value})`);
+      return false;
+    }
+  }
+  
+  alert(`${modelKey}型模型驗證通過!`);
+  return true;
+};
+
+$("#saveModelsBtn").addEventListener("click", () => {
+  const anchorDays = [1,3,7,14,30,60,90,120,150,180,210,240,270,300,360];
+  let hasErrors = false;
+  
+  Object.keys(currentModels).forEach(modelKey => {
+    if (!validateModel(modelKey)) {
+      hasErrors = true;
+      return;
+    }
+    
+    const newAnchors = {};
+    anchorDays.forEach(day => {
+      const input = document.getElementById(`edit_${modelKey}_${day}`);
+      if (input && input.value.trim()) {
+        newAnchors[day] = parseFloat(input.value);
+      }
+    });
+    
+    currentModels[modelKey].anchors = newAnchors;
+  });
+  
+  if (hasErrors) {
+    alert("請修正錯誤後再保存");
+    return;
+  }
+  
+  saveCustomModels();
+  alert("所有模型已保存成功!");
+  modelEditorModal.style.display = "none";
+});
+
+$("#resetAllModelsBtn").addEventListener("click", () => {
+  if (confirm("確定要重置所有模型到預設值嗎?此操作無法復原。")) {
+    resetToDefaultModels();
+    buildModelEditor();
+    alert("所有模型已重置為預設值");
+  }
+});
+
+$("#exportModelsBtn").addEventListener("click", () => {
+  const dataStr = JSON.stringify(currentModels, null, 2);
+  const blob = new Blob([dataStr], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `pl_calculator_models_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+$("#importModelsBtn").addEventListener("click", () => {
+  $("#importFileInput").click();
+});
+
+$("#importFileInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      
+      if (typeof imported !== 'object') throw new Error("格式錯誤");
+      
+      Object.entries(imported).forEach(([key, model]) => {
+        if (!model.name || !model.anchors) throw new Error(`模型${key}格式錯誤`);
+      });
+      
+      if (confirm("確定要匯入這些模型嗎?將覆蓋現有的自訂模型。")) {
+        currentModels = {...DEFAULT_MODELS, ...imported};
+        saveCustomModels();
+        buildModelEditor();
+        alert("模型匯入成功!");
+      }
+    } catch (err) {
+      alert(`匯入失敗:${err.message}`);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+});
+
+// ===== Chapter 2: 每月模擬 =====
+const monthlyBtn=$("#runMonthlyBtn");
+const csvMonthlyBtn=$("#csvMonthlyBtn");
+const msgMonthly=$("#msgMonthly");
+const monthlyResult=$("#monthlyResult");
+const monthlyTbody=$("#monthlyTable tbody");
+let monthlyCache=null;
+
+function buildSequence(count, values, tail, tailEnd, totalMonths) {
+  const result = new Array(totalMonths).fill(0);
+  const parsedValues = parseList(values);
+  
+  for (let m = 0; m < totalMonths; m++) {
+    if (m < Math.min(count, parsedValues.length)) {
+      result[m] = parsedValues[m];
+    } else if (m < tailEnd) {
+      result[m] = tail;
+    } else {
+      result[m] = tail;
+    }
+  }
+  return result;
+}
+
+function buildDistributionOverrides() {
+  const table = $("#distTable tbody");
+  const M = parseInt($("#months").value) || 24;
+  
+  const defaultMode = $("#distDefaultMode").value;
+  const defaultN = $("#distDefaultN").value;
+  const defaultPct = $("#distDefaultPct").value;
+  
+  table.innerHTML = "";
+  for (let m = 1; m <= M; m++) {
+    const row = table.insertRow();
+    row.innerHTML = `
+      <td>M${m}</td>
+      <td><select id="distMode_${m}" onchange="toggleDistInputs(${m})">
+        <option value="集中" ${defaultMode==='集中'?'selected':''}>集中</option>
+        <option value="平均" ${defaultMode==='平均'?'selected':''}>平均</option>
+        <option value="客製" ${defaultMode==='客製'?'selected':''}>客製</option>
+      </select></td>
+      <td><input id="distN_${m}" type="number" min="1" max="30" value="${defaultN}" style="width:60px;"></td>
+      <td><input id="distPct_${m}" type="number" min="0" max="100" step="0.01" value="${defaultPct}" style="width:60px;"></td>
+    `;
+    
+    toggleDistInputs(m);
+  }
+}
+
+window.toggleDistInputs = function(month) {
+  const modeEl = document.getElementById(`distMode_${month}`);
+  const nEl = document.getElementById(`distN_${month}`);
+  const pctEl = document.getElementById(`distPct_${month}`);
+  
+  if (!modeEl || !nEl || !pctEl) return;
+  
+  const mode = modeEl.value;
+  
+  if (mode === "平均") {
+    nEl.disabled = true;
+    pctEl.disabled = true;
+    nEl.style.backgroundColor = "#1a1f2e";
+    pctEl.style.backgroundColor = "#1a1f2e";
+  } else if (mode === "集中") {
+    nEl.disabled = false;
+    pctEl.disabled = true;
+    nEl.style.backgroundColor = "#0b1220";
+    pctEl.style.backgroundColor = "#1a1f2e";
+  } else if (mode === "客製") {
+    nEl.disabled = false;
+    pctEl.disabled = false;
+    nEl.style.backgroundColor = "#0b1220";
+    pctEl.style.backgroundColor = "#0b1220";
+  }
+};
+
+$("#distDefaultMode").addEventListener("change", () => {
+  const mode = $("#distDefaultMode").value;
+  const nEl = $("#distDefaultN");
+  const pctEl = $("#distDefaultPct");
+  
+  if (mode === "平均") {
+    nEl.disabled = true;
+    pctEl.disabled = true;
+    nEl.style.backgroundColor = "#1a1f2e";
+    pctEl.style.backgroundColor = "#1a1f2e";
+  } else if (mode === "集中") {
+    nEl.disabled = false;
+    pctEl.disabled = true;
+    nEl.style.backgroundColor = "#0b1220";
+    pctEl.style.backgroundColor = "#1a1f2e";
+  } else if (mode === "客製") {
+    nEl.disabled = false;
+    pctEl.disabled = false;
+    nEl.style.backgroundColor = "#0b1220";
+    pctEl.style.backgroundColor = "#0b1220";
+  }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(() => {
+    const mode = $("#distDefaultMode").value || "集中";
+    const nEl = $("#distDefaultN");
+    const pctEl = $("#distDefaultPct");
+    
+    if (nEl && pctEl) {
+      if (mode === "平均") {
+        nEl.disabled = true;
+        pctEl.disabled = true;
+        nEl.style.backgroundColor = "#1a1f2e";
+        pctEl.style.backgroundColor = "#1a1f2e";
+      } else if (mode === "集中") {
+        nEl.disabled = false;
+        pctEl.disabled = true;
+        nEl.style.backgroundColor = "#0b1220";
+        pctEl.style.backgroundColor = "#1a1f2e";
+      } else if (mode === "客製") {
+        nEl.disabled = false;
+        pctEl.disabled = false;
+        nEl.style.backgroundColor = "#0b1220";
+        pctEl.style.backgroundColor = "#0b1220";
+      }
+    }
+  }, 200);
+});
+
+$("#toggleOverrides").addEventListener("click", () => {
+  const overrides = $("#distOverrides");
+  if (overrides.style.display === "none") {
+    overrides.style.display = "block";
+    buildDistributionOverrides();
+    $("#toggleOverrides").textContent = "關閉逐月覆寫表";
+  } else {
+    overrides.style.display = "none";
+    $("#toggleOverrides").textContent = "開啟逐月覆寫表";
+  }
+});
+
+$("#applyGlobal").addEventListener("click", () => {
+  const M = parseInt($("#months").value) || 24;
+  const globalMode = $("#distDefaultMode").value;
+  const globalN = $("#distDefaultN").value;
+  const globalPct = $("#distDefaultPct").value;
+  
+  for (let m = 1; m <= M; m++) {
+    const modeEl = document.getElementById(`distMode_${m}`);
+    const nEl = document.getElementById(`distN_${m}`);
+    const pctEl = document.getElementById(`distPct_${m}`);
+    
+    if (modeEl) modeEl.value = globalMode;
+    if (nEl) nEl.value = globalN;
+    if (pctEl) pctEl.value = globalPct;
+    
+    toggleDistInputs(m);
+  }
+});
+
+function getDistributionForMonth(month) {
+  const modeEl = document.getElementById(`distMode_${month}`);
+  const nEl = document.getElementById(`distN_${month}`);
+  const pctEl = document.getElementById(`distPct_${month}`);
+  
+  if (modeEl && nEl && pctEl) {
+    return {
+      mode: modeEl.value,
+      n: parseInt(nEl.value) || 1,
+      pct: parseFloat(pctEl.value) || 60
+    };
+  } else {
+    return {
+      mode: $("#distDefaultMode").value,
+      n: parseInt($("#distDefaultN").value) || 1,
+      pct: parseFloat($("#distDefaultPct").value) || 60
+    };
+  }
+}
+
+function distributeInstalls(installs, dist) {
+  const daily = new Array(30).fill(0);
+  const total = installs;
+  
+  if (dist.mode === "平均") {
+    const perDay = total / 30;
+    for (let d = 0; d < 30; d++) {
+      daily[d] = perDay;
+    }
+  } else if (dist.mode === "集中") {
+    const n = Math.min(30, Math.max(1, dist.n));
+    const perDay = total / n;
+    for (let d = 0; d < n; d++) {
+      daily[d] = perDay;
+    }
+  } else if (dist.mode === "客製") {
+    const n = Math.min(30, Math.max(1, dist.n));
+    const pct = Math.min(100, Math.max(0, dist.pct));
+    const frontAmount = total * (pct / 100);
+    const backAmount = total - frontAmount;
+    
+    const perDayFront = frontAmount / n;
+    const perDayBack = backAmount / (30 - n);
+    
+    for (let d = 0; d < n; d++) {
+      daily[d] = perDayFront;
+    }
+    for (let d = n; d < 30; d++) {
+      daily[d] = perDayBack;
+    }
+  }
+  
+  return daily;
+}
+
+monthlyBtn.addEventListener("click", () => {
+  try {
+    if (!topCache) throw new Error("請先執行 Chapter 1 計算");
+    
+    const M = parseInt($("#months").value) || 24;
+    const channelShare = parseFloat($("#channelShare").value) || 0;
+    const ipShare = parseFloat($("#ipShare").value) || 0;
+    const otherCost = parseFloat($("#otherCost").value) || 0;
+    const arpSource = $("#arpSource").value;
+    
+    const showChannelCost = channelShare > 0;
+    const showIpCost = ipShare > 0;
+    const showOtherCost = otherCost > 0;
+    
+    $("#channelCostHeader").style.display = showChannelCost ? "" : "none";
+    $("#ipCostHeader").style.display = showIpCost ? "" : "none";
+    $("#otherCostHeader").style.display = showOtherCost ? "" : "none";
+    
+    const installs = buildSequence(
+      parseInt($("#nuCount").value) || 0,
+      $("#nuValues").value,
+      parseFloat($("#nuTail").value) || 0,
+      parseInt($("#nuTailEnd").value) || M,
+      M
+    );
+    
+    const cpi = buildSequence(
+      parseInt($("#cpiCount").value) || 0,
+      $("#cpiValues").value,
+      parseFloat($("#cpiTail").value) || 0,
+      parseInt($("#cpiTailEnd").value) || M,
+      M
+    );
+    
+    const arpdau = buildSequence(
+      parseInt($("#arpCount").value) || 0,
+      $("#arpValues").value,
+      parseFloat($("#arpTail").value) || 0,
+      parseInt($("#arpTailEnd").value) || M,
+      M
+    );
+    
+    const {rr, s} = topCache;
+    let cumulativePL = 0;
+    let breakEvenMonth = -1;
+    const monthlyData = [];
+    
+    // 🔥 預先計算所有月份的每日導入分配
+    const allMonthlyDailyInstalls = [];
+    for (let m = 0; m < M; m++) {
+      const dist = getDistributionForMonth(m + 1);
+      allMonthlyDailyInstalls[m] = distributeInstalls(installs[m], dist);
+    }
+    
+    monthlyTbody.innerHTML = "";
+    
+    for (let month = 0; month < M; month++) {
+      const monthInstalls = installs[month];
+      const monthCPI = cpi[month];
+      const marketingCost = monthInstalls * monthCPI;
+      
+      const useArpdau = arpSource === "top" ? topCache.arpdau : arpdau[month];
+      
+      const dailyInstalls = allMonthlyDailyInstalls[month];
+      
+      let monthRevenue = 0;
+      let totalDAU = 0;
+      
+      for (let day = 0; day < 30; day++) {
+        let dayDAU = 0;
+        
+        // 當月新 cohorts 的貢獻
+        for (let cohortDay = 0; cohortDay <= day; cohortDay++) {
+          const ageInDays = day - cohortDay + 1;
+          const cohortSize = dailyInstalls[cohortDay];
+          const retentionRate = ageInDays < rr.length ? rr[ageInDays] : rr[rr.length - 1];
+          dayDAU += cohortSize * retentionRate;
+        }
+        
+        // 🔥 修正:歷史月份 cohorts 也要考慮每日分配
+        for (let prevMonth = 0; prevMonth < month; prevMonth++) {
+          const prevDailyInstalls = allMonthlyDailyInstalls[prevMonth];
+          
+          // 該歷史月份的每一天的 cohort
+          for (let prevCohortDay = 0; prevCohortDay < 30; prevCohortDay++) {
+            const ageInDays = (month - prevMonth) * 30 + day - prevCohortDay + 1;
+            const cohortSize = prevDailyInstalls[prevCohortDay];
+            const retentionRate = ageInDays < rr.length ? rr[ageInDays] : rr[rr.length - 1];
+            dayDAU += cohortSize * retentionRate;
+          }
+        }
+        
+        totalDAU += dayDAU;
+        monthRevenue += dayDAU * useArpdau;
+      }
+      
+      const avgDAU = totalDAU / 30;
+      
+      const channelCostAmount = monthRevenue * (channelShare / 100);
+      const ipCostAmount = monthRevenue * (ipShare / 100);
+      const otherCostAmount = monthRevenue * (otherCost / 100);
+      const totalCosts = channelCostAmount + ipCostAmount + otherCostAmount;
+      
+      const netRevenue = monthRevenue - totalCosts;
+      const roas = marketingCost > 0 ? monthRevenue / marketingCost : 0;
+      const roi = marketingCost > 0 ? (netRevenue - marketingCost) / marketingCost : 0;
+      
+      cumulativePL += (netRevenue - marketingCost);
+      
+      if (breakEvenMonth === -1 && cumulativePL > 0) {
+        breakEvenMonth = month + 1;
+      }
+      
+      monthlyData.push({
+        month: month + 1,
+        installs: monthInstalls,
+        cpi: monthCPI,
+        marketingCost,
+        arpdau: useArpdau,
+        avgDAU,
+        revenue: monthRevenue,
+        channelCost: channelCostAmount,
+        ipCost: ipCostAmount,
+        otherCostAmount: otherCostAmount,
+        netRevenue,
+        roas,
+        roi,
+        cumulativePL
+      });
+      
+      const row = monthlyTbody.insertRow();
+      
+      let rowHTML = `
+        <td>M${month + 1}</td>
+        <td>${fmtInt0(monthInstalls)}</td>
+        <td>${fmtNum(monthCPI, 2)}</td>
+        <td>${fmtInt0(marketingCost)}</td>
+        <td>${fmtNum(useArpdau, 4)}</td>
+        <td>${fmtInt0(avgDAU)}</td>
+        <td>${fmtInt0(monthRevenue)}</td>
+      `;
+      
+      if (showChannelCost) {
+        rowHTML += `<td>${fmtInt0(channelCostAmount)}</td>`;
+      }
+      if (showIpCost) {
+        rowHTML += `<td>${fmtInt0(ipCostAmount)}</td>`;
+      }
+      if (showOtherCost) {
+        rowHTML += `<td>${fmtInt0(otherCostAmount)}</td>`;
+      }
+      
+      const cumulativePLClass = cumulativePL >= 0 ? 'ok' : 'neg';
+      rowHTML += `
+        <td>${fmtInt0(netRevenue)}</td>
+        <td>${fmtNum(roas, 2)}</td>
+        <td>${wrapNeg(roi, fmtPct(roi, 1))}</td>
+        <td><span class="${cumulativePLClass}">${fmtInt0(cumulativePL)}</span></td>
+      `;
+      
+      row.innerHTML = rowHTML;
+    }
+    
+    monthlyResult.style.display = "block";
+    csvMonthlyBtn.disabled = false;
+    
+    $("#bePill").textContent = `回本月:${breakEvenMonth > 0 ? 'M' + breakEvenMonth : '未回本'}`;
+    $("#projPill").textContent = `RR 來源:${topCache.useMonth ? 'M' + topCache.useMonth : '通用'};ARPDAU 來源:${arpSource === 'top' ? 'Chapter 1' : 'Chapter 2'};導入分配:已套用。`;
+    
+    msgMonthly.textContent = "每月營運計算完成!";
+    msgMonthly.className = "pill ok";
+    
+    monthlyCache = { monthlyData, M, breakEvenMonth, allMonthlyDailyInstalls };
+    
+  } catch (err) {
+    monthlyResult.style.display = "none";
+    csvMonthlyBtn.disabled = true;
+    msgMonthly.textContent = `錯誤:${err.message}`;
+    msgMonthly.className = "pill neg";
+  }
+});
+
+csvMonthlyBtn.addEventListener("click", () => {
+  if (!monthlyCache) return;
+  
+  const { monthlyData } = monthlyCache;
+  const channelShare = parseFloat($("#channelShare").value) || 0;
+  const ipShare = parseFloat($("#ipShare").value) || 0;
+  const otherCost = parseFloat($("#otherCost").value) || 0;
+  
+  let headers = ["Month", "Installs", "CPI", "Marketing_Cost", "ARPDAU", "Avg_DAU", "Revenue_Gross"];
+  
+  if (channelShare > 0) headers.push("Channel_Cost");
+  if (ipShare > 0) headers.push("IP_CP_Cost");
+  if (otherCost > 0) headers.push("Other_Cost");
+  
+  headers.push("Revenue_Net", "ROAS", "ROI", "Cumulative_PL");
+  
+  const rows = [headers];
+  
+  monthlyData.forEach(data => {
+    let rowData = [
+      data.month,
+      data.installs,
+      data.cpi,
+      data.marketingCost,
+      data.arpdau,
+      data.avgDAU,
+      data.revenue
+    ];
+    
+    if (channelShare > 0) rowData.push(data.channelCost || 0);
+    if (ipShare > 0) rowData.push(data.ipCost || 0);
+    if (otherCost > 0) rowData.push(data.otherCostAmount || 0);
+    
+    rowData.push(
+      data.netRevenue,
+      data.roas,
+      data.roi,
+      data.cumulativePL
+    );
+    
+    rows.push(rowData);
+  });
+  
+  const csv = rows.map(row => row.join(",")).join("\n");
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `monthly_summary_v4_1_${stamp}.csv`;
+  a.click();
+});
+
+// ===== 反推 A: CPI =====
+$("#solveCPIBtn").addEventListener("click", () => {
+  try {
+    if (!topCache) throw new Error("請先執行 Chapter 1 計算");
+    
+    const targetDays = parseInt($("#targetDaysCPI").value) || 90;
+    const channelShare = parseFloat($("#channelShare").value) || 0;
+    const ipShare = parseFloat($("#ipShare").value) || 0;
+    const otherCost = parseFloat($("#otherCost").value) || 0;
+    const totalDeductionRate = (channelShare + ipShare + otherCost) / 100;
+    
+    const { s, arpdau } = topCache;
+    
+    if (targetDays >= s.length) throw new Error("目標天數超出計算範圍");
+    
+    const cumulativePersonDays = s[targetDays];
+    const ltvGross = cumulativePersonDays * arpdau;
+    const ltvNet = ltvGross * (1 - totalDeductionRate);
+    const maxCPI = ltvNet;
+    
+    const tbody = $("#solveCPIBody");
+    tbody.innerHTML = "";
+    const row = tbody.insertRow();
+    row.innerHTML = `
+      <td>D${targetDays}</td>
+      <td>${fmtNum(ltvGross, 2)}</td>
+      <td>${fmtNum(ltvNet, 2)}</td>
+      <td>${fmtNum(maxCPI, 2)}</td>
+    `;
+    
+    $("#solveCPIResult").style.display = "block";
+    $("#solveCPIMsg").textContent = `完成:在D${targetDays}回本,最高可承受CPI=${fmtNum(maxCPI, 2)}`;
+    $("#solveCPIMsg").className = "pill ok";
+    
+  } catch (err) {
+    $("#solveCPIResult").style.display = "none";
+    $("#solveCPIMsg").textContent = `錯誤:${err.message}`;
+    $("#solveCPIMsg").className = "pill neg";
+  }
+});
+
+// ===== 反推 B: ARPDAU (完全修正版 - 與 Chapter 2 完全一致) =====
+$("#solveBtn").addEventListener("click", () => {
+  try {
+    if (!topCache) throw new Error("請先執行 Chapter 1 計算");
+    if (!monthlyCache) throw new Error("請先執行 Chapter 2 計算");
+    
+    const targetMonths = parseInt($("#targetMonths").value) || 6;
+    const ltvDays = parseInt($("#ltvDaysReq").value) || 90;
+    const channelShare = parseFloat($("#channelShare").value) || 0;
+    const ipShare = parseFloat($("#ipShare").value) || 0;
+    const otherCost = parseFloat($("#otherCost").value) || 0;
+    const totalDeductionRate = (channelShare + ipShare + otherCost) / 100;
+    
+    let totalMarketingCost = 0;
+    for (let month = 0; month < Math.min(targetMonths, monthlyCache.monthlyData.length); month++) {
+      totalMarketingCost += monthlyCache.monthlyData[month].marketingCost;
+    }
+    
+    if (totalMarketingCost === 0) throw new Error("總行銷成本為0,無法計算");
+    
+    const requiredGrossRevenue = totalMarketingCost / (1 - totalDeductionRate);
+    
+    // 🔥 使用與 Chapter 2 完全相同的邏輯
+    let totalPersonDays = 0;
+    const { rr } = topCache;
+    const M = parseInt($("#months").value) || 24;
+    
+    const installs = buildSequence(
+      parseInt($("#nuCount").value) || 0,
+      $("#nuValues").value,
+      parseFloat($("#nuTail").value) || 0,
+      parseInt($("#nuTailEnd").value) || M,
+      M
+    );
+    
+    // 預先計算所有月份的每日導入分配
+    const allMonthlyDailyInstalls = [];
+    for (let m = 0; m < M; m++) {
+      const dist = getDistributionForMonth(m + 1);
+      allMonthlyDailyInstalls[m] = distributeInstalls(installs[m], dist);
+    }
+    
+    // 模擬前 targetMonths 個月
+    for (let month = 0; month < targetMonths; month++) {
+      const dailyInstalls = allMonthlyDailyInstalls[month];
+      
+      for (let day = 0; day < 30; day++) {
+        let dayDAU = 0;
+        
+        // 當月新 cohorts
+        for (let cohortDay = 0; cohortDay <= day; cohortDay++) {
+          const ageInDays = day - cohortDay + 1;
+          const cohortSize = dailyInstalls[cohortDay];
+          const retentionRate = ageInDays < rr.length ? rr[ageInDays] : rr[rr.length - 1];
+          dayDAU += cohortSize * retentionRate;
+        }
+        
+        // 🔥 歷史月份 cohorts - 與 Chapter 2 完全相同
+        for (let prevMonth = 0; prevMonth < month; prevMonth++) {
+          const prevDailyInstalls = allMonthlyDailyInstalls[prevMonth];
+          
+          for (let prevCohortDay = 0; prevCohortDay < 30; prevCohortDay++) {
+            const ageInDays = (month - prevMonth) * 30 + day - prevCohortDay + 1;
+            const cohortSize = prevDailyInstalls[prevCohortDay];
+            const retentionRate = ageInDays < rr.length ? rr[ageInDays] : rr[rr.length - 1];
+            dayDAU += cohortSize * retentionRate;
+          }
+        }
+        
+        totalPersonDays += dayDAU;
+      }
+    }
+    
+    if (totalPersonDays === 0) throw new Error("總人日為0,無法計算");
+    
+    const requiredARPDAU = requiredGrossRevenue / totalPersonDays;
+    
+    const { s } = topCache;
+    if (ltvDays >= s.length) throw new Error("LTV天數超出計算範圍");
+    
+    const personDaysAtD = s[ltvDays];
+    const ltvGross = personDaysAtD * requiredARPDAU;
+    const ltvNet = ltvGross * (1 - totalDeductionRate);
+    
+    const tbody = $("#solveBody");
+    tbody.innerHTML = "";
+    const row = tbody.insertRow();
+    row.innerHTML = `
+      <td>M${targetMonths}</td>
+      <td>${fmtNum(requiredARPDAU, 4)}</td>
+      <td>${fmtNum(ltvGross, 4)}</td>
+      <td>${fmtNum(ltvNet, 4)}</td>
+    `;
+    
+    $("#solveResult").style.display = "block";
+    
+    console.log(`=== 反推B(與Ch2完全一致) ===`);
+    console.log(`目標月數: ${targetMonths}`);
+    console.log(`累積行銷成本: ${fmtNum(totalMarketingCost, 0)}`);
+    console.log(`需要毛收入: ${fmtNum(requiredGrossRevenue, 0)}`);
+    console.log(`累積人日: ${fmtNum(totalPersonDays, 0)}`);
+    console.log(`需要ARPDAU: ${fmtNum(requiredARPDAU, 4)}`);
+    
+  } catch (err) {
+    $("#solveResult").style.display = "none";
+    alert(`反推B計算錯誤:${err.message}\n\n請確保已執行Chapter 2計算後再使用此功能。`);
+  }
+});
+
+</script>
+</body>
+</html>
