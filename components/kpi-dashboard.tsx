@@ -14,6 +14,7 @@ import {
   FileText,
   Upload,
   Download,
+  Repeat,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -44,22 +45,20 @@ export function KpiDashboard({ title, variant = "business-plan" }: KpiDashboardP
     const slicedData = opsData.slice(0, monthsToCalc)
 
     let totalCost: number
-    if (roiMode === "marketing") {
-      totalCost = removedItems.includes("marketingCost") ? 0 : slicedData.reduce((a, b) => a + b.marketing, 0)
-    } else {
-      totalCost = slicedData.reduce((a, b) => {
-        let cost = 0
-        if (!removedItems.includes("marketingCost")) cost += b.marketing
-        if (!removedItems.includes("laborCost")) cost += b.laborCost
-        if (!removedItems.includes("serverCost")) cost += b.serverCost
-        cost += b.channelFee
-        cost += b.customTotal
-        return a + cost
+    let totalRevenue: number
+    
+    if (roiMode === "marketing") { // ROAS
+      totalCost = slicedData.reduce((acc, month) => acc + month.marketingCost, 0)
+      totalRevenue = slicedData.reduce((acc, month) => acc + month.grossRevenue, 0)
+      return totalCost > 0 ? `${((totalRevenue / totalCost) * 100).toFixed(2)}%` : "0%"
+    } else { // ROI
+      totalCost = slicedData.reduce((acc, month) => {
+        const fullCost = month.marketingCost + month.channelFee + month.ipCost + month.cpCost + month.opeCost + month.fc
+        return acc + fullCost
       }, 0)
+      const totalProfit = slicedData.reduce((acc, month) => acc + month.profit, 0)
+      return totalCost > 0 ? `${((totalProfit / totalCost) * 100).toFixed(2)}%` : "0%"
     }
-
-    const totalRevenue = slicedData.reduce((a, b) => a + b.grossRevenue, 0)
-    return totalCost > 0 ? ((totalRevenue / totalCost) * 100).toFixed(2) + "%" : "0%"
   }
 
   const roi = calcRoi()
@@ -251,20 +250,29 @@ export function KpiDashboard({ title, variant = "business-plan" }: KpiDashboardP
                       月
                     </span>
                   ) : (
-                    `ROI (${roiMonths}月)`
+                    `${roiMode === 'full' ? 'ROI' : 'ROAS'} (${roiMonths}月)`
                   )}
                 </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 px-1.5 text-xs text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-foreground/10"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setRoiMode(roiMode === "full" ? "marketing" : "full")
-                  }}
-                >
-                  {roiMode === "full" ? "全成本" : "市場費"}
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setRoiMode(roiMode === "full" ? "marketing" : "full")
+                        }}
+                      >
+                        <Repeat className="w-3 h-3 text-sidebar-foreground/60" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>切換 ROI / ROAS 計算</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 {variant === "income-statement" && <TrendingUp className="w-3 h-3 text-green-400" />}
               </div>
               <p className="text-xl font-bold text-white">{roi}</p>

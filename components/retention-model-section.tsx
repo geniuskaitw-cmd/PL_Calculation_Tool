@@ -11,7 +11,6 @@ import { Wand2, Eraser, ArrowDownToLine, FolderOpen, Activity, Spline } from "lu
 import { useFinance } from "@/lib/finance-context"
 import { RR_DAYS } from "@/lib/finance-types"
 import { interpolateRR } from "@/lib/finance-utils"
-import { RETENTION_MODELS } from "@/lib/retention-models"
 import { CollapsibleCard } from "./collapsible-card"
 import {
   DropdownMenu,
@@ -22,8 +21,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { toast } from "sonner"
 
-const RETENTION_TEMPLATES_FOLDER = "/retention-templates"
+const MODEL_PRESETS = [
+  { id: "A", name: "A型 - RPG高標", color: "#22c55e", description: "RPG遊戲高留存基準,適合優質RPG產品" },
+  { id: "B", name: "B型 - 一般RPG", color: "#3b82f6", description: "RPG遊戲平均留存水準,通用RPG參考" },
+  { id: "C", name: "C型 - RPG低標", color: "#f59e0b", description: "RPG遊戲低留存基準,保守估計用" },
+  { id: "D", name: "D型 - Royal Match", color: "#ef4444", description: "三消遊戲代表,中度休閒遊戲參考" },
+  { id: "E", name: "E型 - 地鐵跑酷", color: "#8b5cf6", description: "跑酷遊戲代表,快節奏遊戲參考" },
+  { id: "F", name: "F型 - Coin Master", color: "#06b6d4", description: "社交博弈遊戲,長期運營參考" },
+]
 
 export function RetentionModelSection() {
   const { timeline, rrModel, setRrModel, editingMonthIdx, setEditingMonthIdx } = useFinance()
@@ -36,20 +43,36 @@ export function RetentionModelSection() {
     if (error) alert(error)
   }
 
-  const handleApplyPreset = (modelId: string) => {
-    const model = RETENTION_MODELS[modelId]
-    if (!model) return
+  const handleApplyPreset = async (modelId: string) => {
+    try {
+      const res = await fetch(`/models/${modelId}.json`)
+      if (!res.ok) throw new Error(`Failed to load model ${modelId}`)
+      
+      const json = await res.json()
+      
+      // 驗證並轉換 JSON 數據
+      const newCurve: Record<number, number> = {}
+      if (json.retention && typeof json.retention === "object") {
+        RR_DAYS.forEach((d) => {
+          newCurve[d] = json.retention[d.toString()] || 0
+        })
+      } else {
+        throw new Error("Invalid model format")
+      }
 
-    if (confirm(`確定要套用「${model.name}」模型嗎？這將覆蓋目前的數值。`)) {
       if (editingMonthIdx === null) {
-        setRrModel((p) => ({ ...p, default: { ...model.anchors } }))
+        setRrModel((p) => ({ ...p, default: newCurve }))
       } else {
         setRrModel((p) => ({
           ...p,
-          overrides: { ...p.overrides, [editingMonthIdx]: { ...model.anchors } },
+          overrides: { ...p.overrides, [editingMonthIdx]: newCurve },
         }))
       }
       setInputValues({})
+      toast.success(`已套用 ${json.name} 模型`)
+    } catch (error) {
+      console.error("Error applying preset:", error)
+      toast.error("套用模型時發生錯誤")
     }
   }
 
@@ -221,10 +244,13 @@ export function RetentionModelSection() {
           <DropdownMenuContent align="start" className="w-64">
             <DropdownMenuLabel>選擇基準模型</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {Object.values(RETENTION_MODELS).map((model) => (
+            {MODEL_PRESETS.map((model) => (
               <DropdownMenuItem
                 key={model.id}
-                onClick={() => handleApplyPreset(model.id)}
+                onSelect={(e) => {
+                  e.preventDefault()
+                  handleApplyPreset(model.id)
+                }}
                 className="flex flex-col items-start py-2"
               >
                 <div className="font-medium" style={{ color: model.color }}>

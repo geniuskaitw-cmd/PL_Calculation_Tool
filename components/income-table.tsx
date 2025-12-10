@@ -26,6 +26,7 @@ export function IncomeTable() {
   const [newCostName, setNewCostName] = useState("")
   const [selectedDropdownItem, setSelectedDropdownItem] = useState<string>("")
   const [laborDisplayMode, setLaborDisplayMode] = useState<"people" | "money">("people")
+  const [tempHeadcounts, setTempHeadcounts] = useState<Record<string, string>>({})
   const [expandedSections, setExpandedSections] = useState({
     grossSales: true,
     netSales: true,
@@ -299,7 +300,7 @@ export function IncomeTable() {
                 )}
 
                 <RemovableRow itemId="refund" label="退款" field="refund" isDestructive />
-                <RemovableRow itemId="tax" label="稅" field="tax" isDestructive />
+                <RemovableRow itemId="tax" label="消費稅" field="tax" isDestructive />
               </>
             )}
 
@@ -578,9 +579,17 @@ export function IncomeTable() {
                       <td key={d.id} className="p-1">
                         {laborDisplayMode === "people" ? (
                           <Input
-                            type="number"
-                            value={d.headcount}
-                            onChange={(e) => updateMonth(d.id, "headcount", Number.parseInt(e.target.value) || 0)}
+                            type="text"
+                            inputMode="decimal"
+                            value={tempHeadcounts[d.id] ?? d.headcount}
+                            onChange={(e) => setTempHeadcounts({ ...tempHeadcounts, [d.id]: e.target.value })}
+                            onBlur={(e) => {
+                              const val = Number.parseFloat(e.target.value) || 0
+                              updateMonth(d.id, "headcount", val)
+                              const newTemps = { ...tempHeadcounts }
+                              delete newTemps[d.id]
+                              setTempHeadcounts(newTemps)
+                            }}
                             className="w-full h-7 text-right text-sm"
                           />
                         ) : (
@@ -599,7 +608,45 @@ export function IncomeTable() {
                   </tr>
                 )}
 
-                <RemovableRow itemId="serverCost" label="伺服器費" field="serverCost" isDestructive />
+                {settings.useServerRatio ? (
+                  <RemovableRow itemId="serverCost" label="伺服器費" field="serverCost" isDestructive />
+                ) : (
+                  !isItemRemoved("serverCost") && (
+                    <tr className="border-b group">
+                      <td className="py-1.5 pl-8 sticky left-0 bg-card z-10 text-muted-foreground text-center">
+                        <div className="flex justify-center items-center gap-2">
+                          <span>伺服器費</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 opacity-0 group-hover:opacity-100"
+                            onClick={() => handleRemoveDefaultItem("serverCost")}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </td>
+                      {displayMonths.map((d) => (
+                        <td key={d.id} className="p-1">
+                          <Input
+                            type="number"
+                            value={d.serverOverride}
+                            onChange={(e) => updateMonth(d.id, "serverOverride", Number.parseFloat(e.target.value) || 0)}
+                            className="w-full h-7 text-right text-sm"
+                          />
+                        </td>
+                      ))}
+                      <td className="p-1 bg-muted/30">
+                        <div className={cellClass + " text-destructive"}>{formatNumber(getY1Sum("serverCost"))}</div>
+                      </td>
+                      {showAllColumn && (
+                        <td className="p-1 bg-muted/30">
+                          <div className={cellClass + " text-destructive"}>{formatNumber(getAllSum("serverCost"))}</div>
+                        </td>
+                      )}
+                    </tr>
+                  )
+                )}
 
                 {/* Custom Cost Items (user-defined go here, after FC) */}
                 {customCostItems
