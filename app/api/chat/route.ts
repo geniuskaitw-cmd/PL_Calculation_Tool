@@ -1,64 +1,54 @@
-import { createOpenAI } from "@ai-sdk/openai"
-import { streamText, tool } from "ai"
-import { z } from "zod"
+import { Configuration, OpenAIApi } from "openai-edge"
+import { OpenAIStream, StreamingTextResponse } from "ai"
 import { SYSTEM_PROMPT } from "@/lib/ai/system-prompt"
 
-const openai = createOpenAI({
-  baseURL: process.env.OPENAI_BASE_URL,
-  apiKey: process.env.OPENAI_API_KEY,
-})
-
 // Allow streaming responses up to 30 seconds
+export const runtime = "edge"
 export const maxDuration = 30
 
 export async function POST(req: Request) {
-  const json = await req.json()
-  const { messages } = json
-  console.log("Received messages:", JSON.stringify(messages, null, 2))
+  try {
+    const { messages } = await req.json()
 
-  if (!Array.isArray(messages)) {
-    return new Response("messages must be an array", { status: 400 })
+    console.log("🔵 API Route: Received request")
+    console.log("📨 Messages:", JSON.stringify(messages, null, 2))
+
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("❌ OPENAI_API_KEY not configured")
+      return new Response("OpenAI API Key not configured", { status: 500 })
+    }
+
+    const configuration = new Configuration({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+
+    const openai = new OpenAIApi(configuration)
+
+    console.log("🚀 Calling OpenAI API...")
+
+    const response = await openai.createChatCompletion({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: SYSTEM_PROMPT,
+        },
+        ...messages,
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+      stream: true,
+    })
+
+    console.log("✅ OpenAI API call successful, starting stream...")
+
+    const stream = OpenAIStream(response)
+    return new StreamingTextResponse(stream)
+  } catch (error: any) {
+    console.error("❌ API Route Error:", error)
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    })
   }
-
-  const result = streamText({
-    model: openai("gpt-4o"),
-    messages, // 直接使用 messages，因為格式已經兼容
-    system: SYSTEM_PROMPT,
-    // @ts-ignore
-    maxSteps: 10,
-    tools: {
-      updateMonthlyPlan: tool({
-        description: "Update monthly planning parameters like NUU, Budget, or ARPDAU for a specific month.",
-        parameters: z.object({
-          monthIndex: z.number(),
-          field: z.string(),
-          value: z.number(),
-        }),
-        execute: async ({ monthIndex, field, value }: any) => {
-          return `Successfully updated M${monthIndex}'s ${field} to ${value}.`
-        },
-      }),
-      updateRetention: tool({
-        description: "Update the retention curve anchors.",
-        parameters: z.object({
-          day: z.number(),
-          value: z.number(),
-        }),
-        execute: async ({ day, value }: any) => {
-          return `Successfully updated Retention Day ${day} to ${value}%.`
-        },
-      }),
-      applyPreset: tool({
-        description: "Apply a standard industry benchmark retention model.",
-        parameters: z.object({
-          modelId: z.string(),
-        }),
-        execute: async ({ modelId }: any) => {
-          return `Successfully applied preset model ${modelId}.`
-        },
-      }),
-    },
-  })
-
-  return result.toTextStreamResponse()
 }
