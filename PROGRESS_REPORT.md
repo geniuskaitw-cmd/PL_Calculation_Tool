@@ -1,296 +1,105 @@
 # 專案開發進度報告
 
-**報告日期:** 2025-12-10（最後更新）
-
-## 1. 整體進度
-
-專案已完成 **AI 功能與雲端化** 的核心實現，成功將應用程式從靜態計算器升級為具備 **AI 自動填表能力** 的智慧財務 SaaS 應用。
-
-### 主要里程碑
-- ✅ **Phase 1**: 雲端化基礎建設（環境配置完成）
-- ✅ **Phase 2**: AI 基礎建設與對話功能
-- ✅ **Phase 3**: AI Tool Calling 自動填表功能
-- 🟡 **Phase 4**: 雲端存檔功能（待實作）
+**更新日期**: 2025-12-11
 
 ---
 
-## 2. AI 助手完整技術架構
+## 當前狀態：🔴 AI 計算準確性問題（嚴重）
 
-### 2.1 技術棧總覽
+### 核心問題
 
-#### 核心 SDK 與版本
-```json
-{
-  "ai": "^3.3.44",                    // Vercel AI SDK (降級至 v3.x)
-  "openai-edge": "^1.2.2",            // OpenAI Edge Runtime 適配器
-  "@ai-sdk/openai": "^2.0.80",        // OpenAI SDK 整合（後端）
-  "@supabase/supabase-js": "^2.87.0"  // 雲端資料庫（未來使用）
-}
-```
+**需求**：「RPG 遊戲，24 個月預算 3000 萬，想賺 800 萬淨利」
 
-#### AI 模型
-- **模型**: `gpt-4o` (OpenAI 最新旗艦模型)
-- **API 端點**: `https://api.openai.com/v1`
-- **功能**: Function Calling（工具調用）、Streaming（串流回應）
+**預期**：
+- 總預算 = 30,000,000
+- 累積利潤 = 8,000,000
 
-### 2.2 系統架構圖
+**實際**：
+- 總預算 ≈ 26,250,000（87.5%）
+- 累積利潤 = **-40,000,000**（❌ 巨虧）
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    用戶端 (Browser)                         │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  components/ai-chat-modal.tsx                         │  │
-│  │  - useChat() from "ai/react"                          │  │
-│  │  - 處理用戶輸入與訊息顯示                                │  │
-│  │  - 監聽 Function Call 並執行工具                        │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                          ↓↑ HTTP POST/Stream                │
-└─────────────────────────────────────────────────────────────┘
-                           ↓↑
-┌─────────────────────────────────────────────────────────────┐
-│               Next.js Edge Runtime (Vercel)                 │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  app/api/chat/route.ts                                │  │
-│  │  - Edge Runtime (超低延遲)                             │  │
-│  │  - 接收前端訊息                                         │  │
-│  │  - 注入 System Prompt                                  │  │
-│  │  - 定義 3 個 Function Tools                            │  │
-│  │  - 使用 OpenAI Stream API                              │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                          ↓↑ HTTPS                           │
-└─────────────────────────────────────────────────────────────┘
-                           ↓↑
-┌─────────────────────────────────────────────────────────────┐
-│                   OpenAI API (GPT-4o)                       │
-│  - Function Calling 決策                                     │
-│  - 自然語言理解                                               │
-│  - 工具選擇與參數生成                                          │
-│  - 串流返回結果                                               │
-└─────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────┐
-│                前端 React Context (State)                    │
-│  lib/finance-context.tsx                                     │
-│  - updateMonth(): 更新月度計劃                               │
-│  - setRrModel(): 更新留存曲線                                │
-│  - 即時更新 UI 表格                                           │
-└─────────────────────────────────────────────────────────────┘
-```
+### 問題根源
 
-### 2.3 資料流程
+1. **AI 不理解「損益表」是目標**
+   - AI 以為任務是「填表格」
+   - 實際應該是「讓損益表的累積利潤 = 800萬」
 
-#### 完整對話流程
-```
-1. 用戶輸入: "請幫我把 M1 的預算設為 100萬"
-   ↓
-2. 前端 useChat 發送 HTTP POST → /api/chat
-   Body: { messages: [{ role: "user", content: "..." }] }
-   ↓
-3. 後端 Edge Function 處理:
-   a. 注入 System Prompt (AI 知識庫)
-   b. 附加 3 個 Function 定義
-   c. 調用 OpenAI API (gpt-4o)
-   ↓
-4. OpenAI 決策:
-   a. 理解用戶意圖
-   b. 選擇工具: updateMonthlyPlan
-   c. 生成參數: { monthIndex: 1, field: "marketing", value: 1000000 }
-   d. 返回 Function Call JSON
-   ↓
-5. 前端接收 Stream Response:
-   a. 檢測到 function_call
-   b. 解析參數
-   c. 執行 updateMonth(id, "marketing", 1000000)
-   d. 顯示確認訊息: "✅ 已完成！成功更新..."
-   ↓
-6. UI 即時更新: 表格中 M1 的預算欄位變為 1,000,000
-```
+2. **AI 忽略成本計算**
+   - 人力成本：5人×20萬×24月 = 2400萬（幾乎等於全部預算）
+   - 渠道費：佔流水的 33%（最大成本）
+   - 退款+稅：佔流水的 15%
 
-### 2.4 核心檔案說明
+3. **AI 不會驗證結果**
+   - 導入後不調用 `get_current_state` 檢查
+   - 看不到 accProfit = -4000 萬
+   - 直接報告「成功」
 
-#### 後端 API (`app/api/chat/route.ts`)
-```typescript
-// 技術要點：
-- Runtime: Edge Runtime (低延遲、全球部署)
-- SDK: openai-edge + ai v3.3
-- Function Calling: 3 個工具定義
-  1. updateMonthlyPlan: 更新月度參數
-  2. updateRetention: 更新留存曲線
-  3. applyPreset: 套用行業模型
-- Streaming: 使用 OpenAIStream + StreamingTextResponse
-```
-
-#### 前端組件 (`components/ai-chat-modal.tsx`)
-```typescript
-// 技術要點：
-- Hook: useChat from "ai/react"
-- 狀態管理: React Context (FinanceContext)
-- 工具執行: 監聽 messages 變化，檢測 function_call
-- 防重複: 使用 useRef 記錄已處理的 toolCallId
-- UX 優化: 
-  - 過濾 JSON 代碼顯示
-  - 綠色確認訊息
-  - Toast 通知
-```
-
-#### AI 知識庫 (`lib/ai/system-prompt.ts`)
-```typescript
-// 包含：
-- 遊戲財務專業知識
-- 行業基準數據 (RPG, SLG, Casual)
-- 計算邏輯說明
-- 工具使用指南
-- 合理性約束
-```
-
-### 2.5 已實現的 AI 功能
-
-#### ✅ 基本對話
-- 自然語言理解
-- 上下文記憶
-- 專業知識問答
-
-#### ✅ 自動填表（Tool Calling）
-支援的操作：
-1. **更新月度參數**
-   - 範例：「請幫我把 M2 的預算設為 200萬」
-   - 工具：`updateMonthlyPlan(monthIndex, field, value)`
-   - 支援欄位：NUU、Marketing（預算）、ARPDAU、ECPA
-
-2. **更新留存曲線**
-   - 範例：「把 Day 1 留存設為 40%」
-   - 工具：`updateRetention(day, value)`
-   - 支援錨點：Day 1, 3, 7, 14, 30, 60, 90, 180
-
-3. **套用行業模型**
-   - 範例：「套用 RPG 遊戲的留存模型」
-   - 工具：`applyPreset(modelId)`
-   - 支援模型：A~F (SLG High/Low, RPG, Casual, etc.)
-
-#### 🟡 規劃中功能
-- 多步驟推理（設定目標 → AI 自動調整多個參數）
-- 財務分析與建議
-- 情境模擬與比較
+4. **AI 優先級錯誤**
+   - 優先考慮「符合 RPG 行業基準」（ARPDAU $5）
+   - 應該優先考慮「達成 800 萬利潤」（可能需要 ARPDAU $20）
 
 ---
 
-## 3. 2025-12-10 最新更新
+## 已執行的修復嘗試（5 次）
 
-### 3.1 AI 功能突破性進展
-
-#### ✅ 問題：AI 完全無回應
-- **根本原因**：
-  1. 缺少 `.env.local` 環境變數檔案
-  2. AI SDK 版本衝突（v5.x 與 v3.x API 不相容）
-  3. `useChat` 導入路徑錯誤
-
-#### ✅ 解決方案
-1. **環境配置**
-   - 創建 `.env.local` 並配置 OpenAI API Key
-   - 創建 `.env.example` 作為部署範本
-
-2. **依賴版本調整**
-   ```bash
-   # 從
-   ai@5.0.108 + @ai-sdk/react@2.0.109
-   # 降級到
-   ai@3.3.44 + openai-edge@1.2.2
-   ```
-
-3. **導入路徑修正**
-   ```typescript
-   // 錯誤
-   import { useChat } from "ai"
-   import { useChat } from "@ai-sdk/react"
-   
-   // 正確 (ai v3.3)
-   import { useChat } from "ai/react"
-   ```
-
-4. **後端 API 重構**
-   - 改用 Edge Runtime
-   - 手動構建 Function 定義（JSON Schema）
-   - 使用 `openai-edge` 的 `Configuration` + `OpenAIApi`
-
-5. **前端工具執行優化**
-   - 實現 `handleFunctionCall()` 函數
-   - 添加防重複執行機制
-   - 過濾顯示 JSON 代碼
-   - 自動添加確認訊息
-
-### 3.2 用戶體驗優化
-- ✅ 隱藏 Function Call 的 JSON 代碼閃爍
-- ✅ 執行後顯示綠色確認訊息
-- ✅ Toast 通知操作結果
-- ✅ 優化載入狀態提示
-
-### 3.3 部署配置
-- ✅ 已部署至 Vercel Production
-- ✅ 環境變數已在 Vercel 後台設定
-- ✅ `.gitignore` 正確配置（不上傳 `.env.local`）
-- ✅ `.env.example` 提供部署指南
+| # | 日期 | 修復內容 | 效果 |
+|---|------|----------|------|
+| 1 | 12/10 | 加入完整成本公式 | ❌ AI 仍忽略 |
+| 2 | 12/11 | 目標導向工作流程（10步） | ❌ 說會做但不執行 |
+| 3 | 12/11 | 重構優先級系統 | 🟡 預算改善到 87.5% |
+| 4 | 12/11 | 參數範圍明確化 | 🟡 待測試 |
+| 5 | 12/11 | 單位說明強化 | 🟡 待測試 |
 
 ---
 
-## 4. 技術債與已知問題
+## 核心文件位置
 
-### 4.1 AI 功能限制
-1. **多步驟推理未完善**
-   - 目前 AI 主要執行單一操作
-   - 複雜目標（如「24個月賺800萬」）需要多輪對話
-   - 建議：實作規劃模式，讓 AI 一次調整多個參數
+### 後端 API
+- **`app/api/chat/route.ts`**
+  - Line 176: 模型選擇（gpt-4o）
+  - Line 10-153: 6 個工具定義
 
-2. **工具覆蓋不完整**
-   - 尚未支援：calcMode 切換、時間軸調整、自定義成本
-   - 建議：逐步擴充工具定義
+### AI 系統提示詞
+- **`lib/ai/system-prompt.ts`** (約 750 行)
+  - Line 1-88: 核心原則與優先級
+  - Line 90-270: 財務公式與參數權限
+  - Line 272-650: 工作流程與計算範例
 
-3. **錯誤處理待加強**
-   - 當參數超出合理範圍時缺少驗證
-   - 建議：添加參數邊界檢查
+### 前端對話框
+- **`components/ai-chat-modal.tsx`**
+  - Line 111-161: import_complete_plan 執行邏輯
+  - Line 230-273: function_call 解析與執行
 
-### 4.2 性能考量
-- Edge Runtime 提供極低延遲
-- 但每次 API 調用都消耗 Token（成本考量）
-- 建議：監控 API 使用量，必要時設定限制
-
----
-
-## 5. 下一步計畫
-
-### 優先級 1: 增強 AI 能力
-1. 實作多步驟規劃模式
-2. 添加更多工具（calcMode、自定義成本等）
-3. 實現財務分析與建議功能
-
-### 優先級 2: 雲端存檔功能
-1. 建立 Supabase 資料表結構
-2. 實作使用者驗證 (Auth)
-3. 串接存檔/讀取 API
-
-### 優先級 3: 進階功能
-1. 反推計算機 (Solver)
-2. 情境模擬與比較
-3. 導出報告功能
+### 財務計算
+- **`lib/finance-utils.ts`**
+  - Line 332-438: calculatePLData（損益表計算）
 
 ---
 
-## 6. 團隊協作指南
+## 已實作的功能
 
-### 本地開發設定
-1. Clone repository
-2. 複製 `.env.example` 為 `.env.local`
-3. 填入您的 OpenAI API Key
-4. 執行 `npm install`
-5. 執行 `npm run dev`
+### ✅ 基礎功能（可用）
+- AI 對話
+- 單一參數更新（updateMonthlyPlan）
+- 留存模型套用（applyPreset）
 
-### 部署到 Vercel
-1. 連接 GitHub repository
-2. 在 Vercel 專案設定中添加環境變數：
-   - `OPENAI_API_KEY`
-   - `OPENAI_BASE_URL`
-3. 自動部署完成
+### ✅ 進階工具（已實作）
+- get_current_state（讀取狀態）
+- import_complete_plan（導入 24 月計畫）
+- update_multiple_months（批量更新）
+
+### 🔴 目標功能（失敗）
+- **目標導向規劃**：「24月，3000萬，賺800萬」→ 目前產生 -4000萬虧損
 
 ---
 
-**專案狀態**: 🟢 AI 核心功能已完成並上線
-**下一個里程碑**: 雲端存檔功能實作
+## 可能的解決方向
+
+1. **前端強制驗證**：導入後自動調用 get_current_state 回傳給 AI
+2. **合併工具**：import_complete_plan 返回實際 accProfit
+3. **更換模型**：嘗試 Claude 或其他 AI
+4. **簡化任務**：改為多輪引導，不要求一次完成
+
+---
+
+**當前優先級**：解決 AI 計算問題 > 其他所有功能

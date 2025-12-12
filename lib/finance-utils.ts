@@ -176,8 +176,16 @@ function buildRRWithCurvatureInheritance(
 export function getDailyCurve(points: Record<number, number>, mode: InterpolationMode = "linear_log"): number[] {
   const MAX_DAYS = 721
   
+  // 防禦性檢查：如果 points 是 undefined 或 null，返回預設曲線
+  if (!points || typeof points !== 'object') {
+    console.warn('⚠️ getDailyCurve: points 為空，返回預設曲線')
+    const daily = new Array(MAX_DAYS).fill(0)
+    daily[0] = 100
+    return daily
+  }
+  
   // 找出有有效值的錨點 (> 0)
-  const anchors = RR_DAYS.filter((d) => points[d] > 0).sort((a, b) => a - b)
+  const anchors = RR_DAYS.filter((d) => points[d] && points[d] > 0).sort((a, b) => a - b)
   
   if (mode === "smart_curvature") {
      return buildRRWithCurvatureInheritance(anchors, points, MAX_DAYS - 1)

@@ -8,7 +8,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] })
 const _notoSansTC = Noto_Sans_TC({ subsets: ["latin"], weight: ["400", "500", "600", "700"] })
 
 export const metadata: Metadata = {
-  title: "經營計劃 - 財務儀表板",
+  title: "P&L Estimation Tool",
   description: "財務損益表與經營計劃管理系統",
     generator: 'v0.app'
 }

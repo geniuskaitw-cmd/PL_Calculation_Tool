@@ -41,7 +41,7 @@ function FinanceDashboard() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setShowAiChat(true)}
+                    onClick={() => {}}
                     className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent/80"
                   >
                     <Bot className="w-4 h-4" />
